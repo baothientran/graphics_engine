@@ -1,4 +1,0 @@
-/home/baothientran/Projects/GraphicsEngine/build/CMakeFiles/rebuild_cache.dir
-/home/baothientran/Projects/GraphicsEngine/build/CMakeFiles/GraphicsEngine.dir
-/home/baothientran/Projects/GraphicsEngine/build/CMakeFiles/edit_cache.dir
-/home/baothientran/Projects/GraphicsEngine/build/CMakeFiles/GraphicsEngine_autogen.dir
