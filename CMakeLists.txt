@@ -31,7 +31,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
 find_package(glm CONFIG REQUIRED)
-find_package(Threads REQUIRED)
 
 add_executable(GraphicsEngine
     shaders/ForwardPhongVert.glsl
@@ -55,6 +54,6 @@ add_executable(GraphicsEngine
     Plugins.cpp
 )
 
-target_link_libraries(GraphicsEngine PRIVATE Qt5::Widgets Threads::Threads)
+target_link_libraries(GraphicsEngine PRIVATE Qt5::Widgets)
 
 file(COPY shaders DESTINATION ${PROJECT_BINARY_DIR})

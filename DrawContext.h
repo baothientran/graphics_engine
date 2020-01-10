@@ -2,7 +2,6 @@
 #define DRAWCONTEXT_H
 
 #include <queue>
-#include <mutex>
 #include "GLDriver.h"
 #include "Scene.h"
 
@@ -136,8 +135,6 @@ protected:
 class DrawContext {
 public:
     using SceneNode = Node<std::unique_ptr<Drawable>>;
-
-    std::mutex mutex;
 
     inline GLDriver &getDriver() { return _driver; }
 

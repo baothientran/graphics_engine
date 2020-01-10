@@ -85,12 +85,9 @@ void Viewer::renderNow() {
         _initialize = true;
     }
 
-    {
-        std::scoped_lock lock(_context.mutex);
-        driver.makeCurrent(this);
-        render();
-        driver.swapBuffers(this);
-    }
+    driver.makeCurrent(this);
+    render();
+    driver.swapBuffers(this);
 
     if (_animating)
         renderLater();

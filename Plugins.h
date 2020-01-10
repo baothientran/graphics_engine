@@ -4,7 +4,6 @@
 #include <QWindow>
 #include <QResizeEvent>
 #include <glm/glm.hpp>
-#include <thread>
 #include "DrawContext.h"
 
 class Viewer;
@@ -76,7 +75,6 @@ public slots:
 
 private:
     std::optional<EffectProperty> _defaultEffectProperty;
-    std::thread _meshParsingJob;
 };
 
 

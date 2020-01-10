@@ -27,24 +27,20 @@ void OrbitCameraPlugin::mouseMoveEvent(QMouseEvent *event) {
         return;
 
     auto &context = _viewer->getDrawContext();
-    {
-        std::scoped_lock lock(context.mutex);
+    auto &camera = context.getCamera();
+    auto orientation = glm::mat3(camera.getViewMatrix());
+    auto viewDir = glm::normalize(glm::row(orientation, 2));
+    auto upDir = Camera::UP_DIRECTION;
+    glm::vec3 xaxis = glm::cross(viewDir, upDir);
+    if (glm::dot(xaxis, glm::row(orientation, 0)) < 0)
+        xaxis = -xaxis;
 
-        auto &camera = context.getCamera();
-        auto orientation = glm::mat3(camera.getViewMatrix());
-        auto viewDir = glm::normalize(glm::row(orientation, 2));
-        auto upDir = Camera::UP_DIRECTION;
-        glm::vec3 xaxis = glm::cross(viewDir, upDir);
-        if (glm::dot(xaxis, glm::row(orientation, 0)) < 0)
-            xaxis = -xaxis;
-
-        auto rotateX = glm::angleAxis(0.007f  * (currMousePos.y - _prevMousePos.y), normalize(xaxis));
-        auto rotateY = glm::angleAxis(0.007f  * (currMousePos.x - _prevMousePos.x), normalize(upDir));
-        auto viewQuat = camera.getViewQuat() * rotateX * rotateY;
-        auto newCamPos = camera.getPosition() * rotateX * rotateY;
-        camera.setViewQuat(glm::normalize(viewQuat));
-        camera.setPosition(newCamPos);
-    }
+    auto rotateX = glm::angleAxis(0.007f  * (currMousePos.y - _prevMousePos.y), normalize(xaxis));
+    auto rotateY = glm::angleAxis(0.007f  * (currMousePos.x - _prevMousePos.x), normalize(upDir));
+    auto viewQuat = camera.getViewQuat() * rotateX * rotateY;
+    auto newCamPos = camera.getPosition() * rotateX * rotateY;
+    camera.setViewQuat(glm::normalize(viewQuat));
+    camera.setPosition(newCamPos);
 
     // reset mouse position when leaving the window
     bool boundary = false;
@@ -95,17 +91,13 @@ void OrbitCameraPlugin::mouseReleaseEvent(QMouseEvent *event) {
 
 void OrbitCameraPlugin::wheelEvent(QWheelEvent *event) {
     auto &context = _viewer->getDrawContext();
-    {
-        std::scoped_lock lock(context.mutex);
-
-        auto &camera = context.getCamera();
-        auto camPos = camera.getPosition();
-        auto scale = glm::abs(glm::length(camPos - camera.getFocus())) / 25.0f + 1.0f;
-        auto orientation = glm::mat3(camera.getViewMatrix());
-        auto camDir = glm::normalize(-glm::row(orientation, 2));
-        auto newPos = camPos + camDir * scale * 0.007f * static_cast<float>(event->delta());
-        camera.setPosition(newPos);
-    }
+    auto &camera = context.getCamera();
+    auto camPos = camera.getPosition();
+    auto scale = glm::abs(glm::length(camPos - camera.getFocus())) / 25.0f + 1.0f;
+    auto orientation = glm::mat3(camera.getViewMatrix());
+    auto camDir = glm::normalize(-glm::row(orientation, 2));
+    auto newPos = camPos + camDir * scale * 0.007f * static_cast<float>(event->delta());
+    camera.setPosition(newPos);
 
     _viewer->renderLater();
 }
@@ -127,7 +119,6 @@ PerspectiveCameraPlugin::PerspectiveCameraPlugin(Viewer *viewer)
 
 void PerspectiveCameraPlugin::resizeEvent(QResizeEvent *) {
     auto &context = _viewer->getDrawContext();
-    std::scoped_lock lock(context.mutex);
     setCameraProjMatrix(context);
 
     _viewer->renderLater();
