@@ -1,7 +1,9 @@
 #ifndef GLDRIVER_H
 #define GLDRIVER_H
+#define GLM_FORCE_SWIZZLE
 
 #include <string>
+#include <memory>
 #include <vector>
 #include <QOpenGLFunctions_4_2_Core>
 #include <QDebug>
@@ -42,16 +44,14 @@ using UniformType = std::variant<
 
 class GLUniform {
 public:
-    GLUniform(int location, const std::string &name, UniformType val)
-        : _name{name}, _val{val}, _location{location}
+    GLUniform(int location, UniformType val)
+        : _val{val}, _location{location}
     {}
 
-    inline const std::string &name() const { return _name; }
-
     template<typename T>
-    inline void setValue(T value) {
+    inline void setValue(const T & value) {
         assert(std::holds_alternative<T>(_val) && "UNIFORM VALUE HAS TO BE THE SAME TYPE");
-        _val = std::move(value);
+        _val = value;
     }
 
     inline const UniformType &getValue() const { return _val; }
@@ -59,24 +59,13 @@ public:
     inline int location() const { return _location; }
 
 private:
-    std::string _name;
     UniformType _val;
     int _location;
 };
 
 
-struct GLAttribute {
-    std::string name;
-    int size;
-    unsigned dataType;
-    int location;
-};
-
-
 class GLProgram {
 public:
-    GLProgram();
-
     GLProgram(GLDriver *driver,
               const std::vector<std::pair<unsigned, std::string>> &shaders);
 
@@ -88,8 +77,6 @@ public:
 
     GLProgram &operator=(GLProgram &&) noexcept;
 
-    explicit operator bool() const;
-
     ~GLProgram() noexcept;
 
     void swap(GLProgram &other) noexcept;
@@ -98,17 +85,13 @@ public:
 
     void unbind();
 
-    inline const std::vector<GLUniform> &getUniforms() const { return _uniforms; }
+    std::map<std::string, GLUniform> getUniforms() const;
 
-    inline const std::vector<GLAttribute> &getAttributes() const { return _attributes; }
+    std::map<std::string, int> getAttributes() const;
 
     void applyUniform(const GLUniform &uniform);
 
 private:
-    std::vector<GLUniform> queryActiveUniforms() const;
-
-    std::vector<GLAttribute> queryActiveAttributes() const;
-
     int queryUniformLocation(const std::string &uniformName) const;
 
     int queryAttributeLocation(const std::string &uniformName) const;
@@ -145,15 +128,11 @@ private:
 
     unsigned _prog;
     GLDriver *_driver;
-    std::vector<GLUniform> _uniforms;
-    std::vector<GLAttribute> _attributes;
 };
 
 
 class GLBuffer {
 public:
-    GLBuffer();
-
     GLBuffer(GLDriver *driver, unsigned target, unsigned usage);
 
     GLBuffer(const GLBuffer &) = delete;
@@ -163,8 +142,6 @@ public:
     GLBuffer &operator=(const GLBuffer &) = delete;
 
     GLBuffer &operator=(GLBuffer &&) noexcept;
-
-    explicit operator bool() const;
 
     ~GLBuffer() noexcept;
 
@@ -189,9 +166,7 @@ private:
 
 class GLVertexArray {
 public:
-    GLVertexArray();
-
-    GLVertexArray(GLDriver *driver, const std::vector<int> &elements, unsigned usage);
+    GLVertexArray(GLDriver *driver, const std::vector<unsigned> &elements, unsigned usage);
 
     GLVertexArray(const GLVertexArray &) = delete;
 
@@ -200,8 +175,6 @@ public:
     GLVertexArray &operator=(const GLVertexArray &) = delete;
 
     GLVertexArray &operator=(GLVertexArray &&) noexcept;
-
-    explicit operator bool() const;
 
     ~GLVertexArray() noexcept;
 
@@ -221,7 +194,7 @@ public:
 
 private:
     GLDriver *_driver;
-    GLBuffer _elementBuffer;
+    std::optional<GLBuffer> _elementBuffer;
     unsigned _vao;
 };
 
@@ -252,13 +225,15 @@ public:
 
     GLBuffer createBuffer(unsigned target, unsigned usage);
 
-    GLVertexArray createVertexArray(const std::vector<int> &elements, unsigned usage);
+    GLVertexArray createVertexArray(const std::vector<unsigned> &elements, unsigned usage);
 
     void setColorMask(bool red, bool blue, bool green, bool alpha);
 
     void enableCullFace(bool enableOrDisable);
 
     void setCullFace(unsigned face);
+
+    void setFrontFace(unsigned face);
 
     void enableStencilTest(bool enableOrDisable);
 
@@ -293,7 +268,7 @@ public:
 private:
     QOpenGLFunctions_4_2_Core _GL;
     QOpenGLContext _context;
-    QOpenGLPaintDevice _device;
+    std::unique_ptr<QOpenGLPaintDevice> _device;
 };
 
 

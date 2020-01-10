@@ -31,17 +31,30 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
 find_package(glm CONFIG REQUIRED)
+find_package(Threads REQUIRED)
 
 add_executable(GraphicsEngine
+    shaders/ForwardPhongVert.glsl
+    shaders/ForwardPhongFrag.glsl
     Main.cpp
+    Utility.h
+    Utility.cpp
     GLDriver.h
     GLDriver.cpp
     Scene.h
     Scene.cpp
+    DrawContext.h
+    DrawContext.cpp
     Drawables.h
     Drawables.cpp
+    Effects.h
+    Effects.cpp
     Viewer.h
     Viewer.cpp
+    Plugins.h
+    Plugins.cpp
 )
 
-target_link_libraries(GraphicsEngine PRIVATE Qt5::Widgets)
+target_link_libraries(GraphicsEngine PRIVATE Qt5::Widgets Threads::Threads)
+
+file(COPY shaders DESTINATION ${PROJECT_BINARY_DIR})

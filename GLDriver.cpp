@@ -5,28 +5,48 @@
 /***************************************************
  * GLUniform utility definitions
  ***************************************************/
-static UniformType getUniformType(unsigned type) {
+static UniformType getUniformType(unsigned type, int size) {
     switch (type) {
     case GL_INT:
-        return int{};
+        if (size == 1)
+            return int{};
+        return std::vector<int>();
     case GL_UNSIGNED_INT:
-        return unsigned{};
+        if (size == 1)
+            return unsigned{};
+        return std::vector<unsigned>();
     case GL_FLOAT:
-        return float{};
+        if (size == 1)
+            return float{};
+        return std::vector<float>();
     case GL_DOUBLE:
-        return double{};
+        if (size == 1)
+            return double{};
+        return std::vector<double>();
     case GL_FLOAT_VEC2:
-        return glm::vec2{};
+        if (size == 1)
+            return glm::vec2{};
+        return std::vector<glm::vec2>();
     case GL_FLOAT_VEC3:
-        return glm::vec3{};
+        if (size == 1)
+            return glm::vec3{};
+        return std::vector<glm::vec3>();
     case GL_FLOAT_VEC4:
-        return glm::vec4{};
+        if (size == 1)
+            return glm::vec4{};
+        return std::vector<glm::vec4>();
     case GL_FLOAT_MAT2:
-        return glm::mat2{};
+        if (size == 1)
+            return glm::mat2{};
+        return std::vector<glm::mat2>();
     case GL_FLOAT_MAT3:
-        return glm::mat3{};
+        if (size == 1)
+            return glm::mat3{};
+        return std::vector<glm::mat3>();
     case GL_FLOAT_MAT4:
-        return glm::mat4{};
+        if (size == 1)
+            return glm::mat4{};
+        return std::vector<glm::mat4>();
     default:
         assert(false && "UNIFORM TYPE NOT IMPLEMENTED");
     }
@@ -36,11 +56,6 @@ static UniformType getUniformType(unsigned type) {
 /***************************************************
  * GLProgram definitions
  ***************************************************/
-GLProgram::GLProgram()
-    : _prog{0}, _driver{nullptr}
-{}
-
-
 GLProgram::GLProgram(GLDriver *driver,
                      const std::vector<std::pair<unsigned, std::string>> &shaders)
     : _driver{driver}
@@ -67,16 +82,18 @@ GLProgram::GLProgram(GLDriver *driver,
         if (!success) {
             GL->glGetShaderInfoLog(shader, 4048, nullptr, infoLog);
             if (shaderType == GL_VERTEX_SHADER)
-                qDebug() << "VERTEX SHADER:" << "\n";
+                qDebug() << "VERTEX SHADER:";
             else if (shaderType == GL_FRAGMENT_SHADER)
-                qDebug() << "FRAGMENT SHADER:" << "\n";
+                qDebug() << "FRAGMENT SHADER:";
             else
-                qDebug() << "UNRECOGNIZED SHADER:" << "\n";
+                qDebug() << "UNRECOGNIZED SHADER:";
 
             qDebug() << infoLog << "\n";
         }
 #endif
     }
+
+    GL->glLinkProgram(_prog);
 
 #ifndef NDEBUG
     int success;
@@ -89,20 +106,15 @@ GLProgram::GLProgram(GLDriver *driver,
 #endif
 
     for (auto shader : createdShaders) {
-        GL->glDetachShader(_prog, shader);
         GL->glDeleteShader(shader);
+        GL->glDetachShader(_prog, shader);
     }
-
-    _uniforms = queryActiveUniforms();
-    _attributes = queryActiveAttributes();
 }
 
 
 GLProgram::GLProgram(GLProgram &&other) noexcept
     :_prog{other._prog},
-    _driver{other._driver},
-    _uniforms{std::move(other._uniforms)},
-    _attributes{std::move(other._attributes)}
+    _driver{other._driver}
 {
     other._prog = 0;
 }
@@ -111,11 +123,6 @@ GLProgram::GLProgram(GLProgram &&other) noexcept
 GLProgram &GLProgram::operator=(GLProgram &&other) noexcept {
     GLProgram(std::move(other)).swap(*this);
     return *this;
-}
-
-
-GLProgram::operator bool() const {
-    return _prog != 0;
 }
 
 
@@ -132,8 +139,6 @@ void GLProgram::swap(GLProgram &other) noexcept {
     using std::swap;
     swap(_driver, other._driver);
     swap(_prog, other._prog);
-    swap(_uniforms, other._uniforms);
-    swap(_attributes, other._attributes);
 }
 
 
@@ -149,43 +154,42 @@ void GLProgram::unbind() {
 }
 
 
-std::vector<GLUniform> GLProgram::queryActiveUniforms() const {
-    auto GL = _driver->GL();
-    int count;
-    GL->glGetProgramiv(_prog, GL_ACTIVE_UNIFORMS, &count);
-
-    std::vector<GLUniform> uniforms;
-    uniforms.reserve(static_cast<std::size_t>(count));
-
-    char uniformName[100];
-    int uniformSize;
-    unsigned uniformType;
-    for (unsigned i = 0; i < static_cast<std::size_t>(count); ++i) {
-        GL->glGetActiveUniform(_prog, i, sizeof(uniformName), nullptr, &uniformSize, &uniformType, uniformName);
-        uniforms.emplace_back(queryUniformLocation(uniformName), uniformName, getUniformType(uniformType));
-    }
-
-    return uniforms;
-}
-
-
-std::vector<GLAttribute> GLProgram::queryActiveAttributes() const {
+std::map<std::string, int> GLProgram::getAttributes() const {
     auto GL = _driver->GL();
     int count;
     GL->glGetProgramiv(_prog, GL_ACTIVE_ATTRIBUTES, &count);
 
-    std::vector<GLAttribute> attributes;
-    attributes.reserve(static_cast<std::size_t>(count));
+    std::map<std::string, int> attributes;
 
     char attribName[100];
     int attribSize;
     unsigned attribDataType;
     for (unsigned i = 0; i < static_cast<std::size_t>(count); ++i) {
         GL->glGetActiveAttrib(_prog, i, sizeof(attribName), nullptr, &attribSize, &attribDataType, attribName);
-        attributes.push_back({std::string(attribName), attribSize, attribDataType, queryAttributeLocation(attribName)});
+        attributes.insert({attribName, queryAttributeLocation(attribName)});
     }
 
     return attributes;
+}
+
+
+std::map<std::string, GLUniform> GLProgram::getUniforms() const {
+    auto GL = _driver->GL();
+    int count;
+    GL->glGetProgramiv(_prog, GL_ACTIVE_UNIFORMS, &count);
+
+    std::map<std::string, GLUniform> uniforms;
+
+    char uniformName[100];
+    int uniformSize;
+    unsigned uniformType;
+    for (unsigned i = 0; i < static_cast<std::size_t>(count); ++i) {
+        GL->glGetActiveUniform(_prog, i, sizeof(uniformName), nullptr, &uniformSize, &uniformType, uniformName);
+        GLUniform uniform(queryUniformLocation(uniformName), getUniformType(uniformType, uniformSize));
+        uniforms.insert({uniformName, std::move(uniform)});
+    }
+
+    return uniforms;
 }
 
 
@@ -285,11 +289,6 @@ void GLProgram::applyUniformImpl(int uniformLoc, const glm::mat4 *val, int count
 /***************************************************
  * GLBuffer definitions
  ***************************************************/
-GLBuffer::GLBuffer()
-    : _driver{nullptr}, _buffer{0}, _target{GL_ARRAY_BUFFER}, _usage{GL_STATIC_DRAW}, _capacity{0}
-{}
-
-
 GLBuffer::GLBuffer(GLDriver *driver, unsigned target, unsigned usage)
     : _driver{driver}, _target{target}, _usage{usage}
 {
@@ -312,11 +311,6 @@ GLBuffer::GLBuffer(GLBuffer &&other) noexcept
 GLBuffer &GLBuffer::operator=(GLBuffer &&other) noexcept {
     GLBuffer(std::move(other)).swap(*this);
     return *this;
-}
-
-
-GLBuffer::operator bool() const {
-    return _buffer != 0;
 }
 
 
@@ -368,22 +362,17 @@ void GLBuffer::loadSubData(int offset, const void *data, int count) {
 /***************************************************
  * GLVertexArray definitions
  ***************************************************/
-GLVertexArray::GLVertexArray()
-    : _driver{nullptr}, _vao{0}
-{}
-
-
-GLVertexArray::GLVertexArray(GLDriver *driver, const std::vector<int> &elements, unsigned usage)
+GLVertexArray::GLVertexArray(GLDriver *driver, const std::vector<unsigned> &elements, unsigned usage)
     : _driver{driver}
 {
     auto GL = _driver->GL();
     GL->glGenVertexArrays(1, &_vao);
     bind();
     _elementBuffer = _driver->createBuffer(GL_ELEMENT_ARRAY_BUFFER, usage);
-    _elementBuffer.bind();
-    _elementBuffer.loadData(elements.data(), static_cast<int>(elements.size() * sizeof(int)));
+    _elementBuffer->bind();
+    _elementBuffer->loadData(elements.data(), static_cast<int>(elements.size() * sizeof(unsigned)));
     unbind();
-    _elementBuffer.unbind();
+    _elementBuffer->unbind();
 }
 
 
@@ -399,11 +388,6 @@ GLVertexArray::GLVertexArray(GLVertexArray &&other) noexcept
 GLVertexArray &GLVertexArray::operator=(GLVertexArray &&other) noexcept {
     GLVertexArray(std::move(other)).swap(*this);
     return *this;
-}
-
-
-GLVertexArray::operator bool() const {
-    return _vao != 0;
 }
 
 
@@ -471,6 +455,8 @@ void GLDriver::initialize(QSurface *surface) {
     _context.create();
     _context.makeCurrent(surface);
     _GL.initializeOpenGLFunctions();
+
+    _device = std::make_unique<QOpenGLPaintDevice>();
 }
 
 
@@ -485,16 +471,16 @@ void GLDriver::makeCurrent(QSurface *surface) {
 
 
 void GLDriver::setSize(const QSize &size) {
-    _device.setSize(size);
+    _device->setSize(size);
 }
 
 
 void GLDriver::setDevicePixelRatio(qreal ratio) {
-    _device.setDevicePixelRatio(ratio);
+    _device->setDevicePixelRatio(ratio);
 }
 
 QPainter GLDriver::createPainter() {
-    return QPainter(&_device);
+    return QPainter(_device.get());
 }
 
 
@@ -508,7 +494,7 @@ GLBuffer GLDriver::createBuffer(unsigned target, unsigned usage) {
 }
 
 
-GLVertexArray GLDriver::createVertexArray(const std::vector<int> &elements, unsigned usage) {
+GLVertexArray GLDriver::createVertexArray(const std::vector<unsigned> &elements, unsigned usage) {
     return {this, elements, usage};
 }
 
@@ -530,6 +516,11 @@ void GLDriver::enableCullFace(bool enableOrDisable) {
 
 void GLDriver::setCullFace(unsigned face) {
     _GL.glCullFace(face);
+}
+
+
+void GLDriver::setFrontFace(unsigned face) {
+    _GL.glFrontFace(face);
 }
 
 

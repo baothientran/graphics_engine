@@ -5,6 +5,7 @@
 #include <QOpenGLPaintDevice>
 #include <QWindow>
 #include "Drawables.h"
+#include "Plugins.h"
 
 
 class Viewer : public QWindow
@@ -16,11 +17,24 @@ public:
 
     void setAnimating(bool animating);
 
+    inline DrawContext &getDrawContext() { return _context; }
+
     virtual void initialize();
 
     virtual void render(QPainter *painter);
 
     virtual void render();
+
+signals:
+    void onResizeEvent(QResizeEvent *);
+    void onKeyPressEvent(QKeyEvent *);
+    void onKeyReleaseEvent(QKeyEvent *);
+    void onMouseMoveEvent(QMouseEvent *);
+    void onMousePressEvent(QMouseEvent *event);
+    void onMouseReleaseEvent(QMouseEvent *event);
+    void onWheelEvent(QWheelEvent *event);
+    void onDragEnterEvent(QDragEnterEvent *event);
+    void onDropEvent(QDropEvent *event);
 
 public slots:
     void renderLater();
@@ -32,8 +46,28 @@ protected:
 
     void exposeEvent(QExposeEvent *) override;
 
+    void resizeEvent(QResizeEvent *event) override;
+
+    void keyPressEvent(QKeyEvent *event) override;
+
+    void keyReleaseEvent(QKeyEvent *event) override;
+
+    void mouseMoveEvent(QMouseEvent *event) override;
+
+    void mousePressEvent(QMouseEvent *event) override;
+
+    void mouseReleaseEvent(QMouseEvent *event) override;
+
+    void wheelEvent(QWheelEvent *event) override;
+
+
 private:
-    DrawContext _scene;
+    std::unique_ptr<ViewerPlugin> _cameraControlPlugin;
+    std::unique_ptr<ViewerPlugin> _cameraProjectionPlugin;
+    std::unique_ptr<ViewerPlugin> _importMeshFilePlugin;
+
+
+    DrawContext _context;
     bool _initialize;
     bool _animating;
 };
