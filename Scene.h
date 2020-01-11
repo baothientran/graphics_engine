@@ -102,6 +102,10 @@ public:
         _children.erase(pos);
     }
 
+    inline void clearChild() {
+        _children.clear();
+    }
+
     template<typename... Args>
     void draw(Args&&... args) {
         NodeAction<T>::draw(*this, std::forward<Args>(args)...);

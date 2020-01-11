@@ -166,7 +166,7 @@ private:
 
 class GLVertexArray {
 public:
-    GLVertexArray(GLDriver *driver, const std::vector<unsigned> &elements, unsigned usage);
+    GLVertexArray(GLDriver *driver, const unsigned *elements, int numOfElements, unsigned usage);
 
     GLVertexArray(const GLVertexArray &) = delete;
 
@@ -225,7 +225,7 @@ public:
 
     GLBuffer createBuffer(unsigned target, unsigned usage);
 
-    GLVertexArray createVertexArray(const std::vector<unsigned> &elements, unsigned usage);
+    GLVertexArray createVertexArray(const unsigned *elements, int numOfElements, unsigned usage);
 
     void setColorMask(bool red, bool blue, bool green, bool alpha);
 

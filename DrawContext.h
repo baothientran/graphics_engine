@@ -108,6 +108,10 @@ public:
 
     virtual ~Drawable() = default;
 
+    inline const std::string &getName() const { return _name; }
+
+    inline void setName(const std::string &name) { _name = name; }
+
     inline DrawContext *getContext() { return _context; }
 
     inline void setTransformation(glm::mat4 transformaiton) {
@@ -116,9 +120,7 @@ public:
 
     inline glm::mat4 getTransformation() const { return _transformation; }
 
-    virtual void setEffectProperty(const EffectProperty &) {}
-
-    virtual void setEffectProperty(EffectProperty &&) {}
+    virtual void setEffectProperty(std::shared_ptr<EffectProperty>) {}
 
     virtual const EffectProperty *getEffectProperty() const { return nullptr; }
 
@@ -129,6 +131,9 @@ public:
 protected:
     DrawContext *_context;
     glm::mat4 _transformation;
+
+private:
+    std::string _name;
 };
 
 

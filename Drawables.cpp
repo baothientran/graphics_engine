@@ -23,42 +23,26 @@ const Geometry::GLAttribute Geometry::NORMAL_ATTRIBUTE = {
 
 
 Geometry::Geometry(DrawContext *context,
-                   unsigned usage,
-                   const std::vector<unsigned> &elements,
-                   const std::vector<glm::vec3> &positions,
-                   const std::vector<glm::vec3> &normals)
-    : Drawable{context}, _vertexCount{static_cast<unsigned>(elements.size())}
+                   std::shared_ptr<GLVertexArray> vao,
+                   std::shared_ptr<GLBuffer> buffer,
+                   unsigned numOfElements,
+                   unsigned elementOffset,
+                   int positionOffset,
+                   int normalOffset)
+    : Drawable{context},
+    _vao{std::move(vao)},
+    _buffer{std::move(buffer)},
+    _numOfElements{numOfElements},
+    _elementOffset{elementOffset},
+    _positionsOffset{positionOffset},
+    _normalsOffset{normalOffset}
 {
-    int positionsCount = static_cast<int>(positions.size() * sizeof(glm::vec3));
-    int normalsCount = static_cast<int>(normals.size() * sizeof(glm::vec3));
 
-    auto &driver = _context->getDriver();
-    _vao = driver.createVertexArray(elements, usage);
-
-    _buffer = driver.createBuffer(GL_ARRAY_BUFFER, usage);
-    _buffer->bind();
-    _buffer->loadData(nullptr, positionsCount + normalsCount);
-
-    if (!positions.empty()) {
-        _positionsOffset = 0;
-        _buffer->loadSubData(_positionsOffset, positions.data(), positionsCount);
-    }
-    else {
-        _positionsOffset = -1;
-    }
-
-    if (!normals.empty()) {
-        _normalsOffset = positionsCount;
-        _buffer->loadSubData(_normalsOffset, normals.data(), normalsCount);
-    }
-    else {
-        _normalsOffset = -1;
-    }
 }
 
 
-void Geometry::setEffectProperty(const EffectProperty &effectProperty) {
-    auto effect = effectProperty.getEffect();
+void Geometry::setEffectProperty(std::shared_ptr<EffectProperty> effectProperty) {
+    auto effect = effectProperty->getEffect();
 
     // enable attribs for VAO in here
     _vao->bind();
@@ -70,33 +54,19 @@ void Geometry::setEffectProperty(const EffectProperty &effectProperty) {
 }
 
 
-void Geometry::setEffectProperty(EffectProperty &&effectProperty) {
-    auto effect = effectProperty.getEffect();
-
-    // enable attribs for VAO in here
-    _vao->bind();
-    enableAttribute(effect, POSITION_ATTRIBUTE, _positionsOffset);
-    enableAttribute(effect, NORMAL_ATTRIBUTE, _normalsOffset);
-    _vao->unbind();
-
-    _effectProperty = std::move(effectProperty);
-}
-
-
 const EffectProperty *Geometry::getEffectProperty() const {
-    return _effectProperty == std::nullopt ? nullptr : &_effectProperty.value();
+    return _effectProperty.get();
 }
 
 
 EffectProperty *Geometry::getEffectProperty() {
-    return _effectProperty == std::nullopt ? nullptr : &_effectProperty.value();
+    return _effectProperty.get();
 }
 
 
 void Geometry::draw() {
     _vao->bind();
-    _context->getDriver().drawElements(GL_TRIANGLES, _vertexCount, GL_UNSIGNED_INT, 0);
-    _vao->unbind();
+    _context->getDriver().drawElements(GL_TRIANGLES, _numOfElements, GL_UNSIGNED_INT, _elementOffset);
 }
 
 

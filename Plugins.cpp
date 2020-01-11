@@ -1,14 +1,16 @@
 #include <glm/gtc/matrix_access.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <QMimeData>
+#include <unordered_set>
 #include "Viewer.h"
 #include "Effects.h"
+#include "Utility.h"
 
 /***************************************************
  * OrbitCameraPlugin definitions
  ***************************************************/
 OrbitCameraPlugin::OrbitCameraPlugin(Viewer *viewer)
-    : ViewerPlugin{viewer}
+    : ViewerPlugin{viewer}, _prevMousePos{glm::vec2(0.0f)}, _isMousePress{false}
 {
     connect(_viewer, &Viewer::onMouseMoveEvent, this, &OrbitCameraPlugin::mouseMoveEvent);
     connect(_viewer, &Viewer::onMousePressEvent, this, &OrbitCameraPlugin::mousePressEvent);
@@ -140,15 +142,14 @@ ImportMeshFilePlugin::ImportMeshFilePlugin(Viewer *viewer)
     connect(_viewer, &Viewer::onDragEnterEvent, this, &ImportMeshFilePlugin::dragEnterEvent);
     connect(_viewer, &Viewer::onDropEvent, this, &ImportMeshFilePlugin::dropEvent);
 
-    // set default phong property for any imported mesh
     auto &context = _viewer->getDrawContext();
     auto forwardPhongEffect = context.getEffect(ForwardPhongEffect::EFFECT_NAME);
-    _defaultEffectProperty = forwardPhongEffect->createEffectProperty();
+    _defaultEffectProperty = std::make_shared<EffectProperty>(forwardPhongEffect->createEffectProperty());
+    _defaultEffectProperty->setParam(ForwardPhongEffect::AMBIENT_COLOR, glm::vec3(1.0f));
     _defaultEffectProperty->setParam(ForwardPhongEffect::DIFFUSE_COLOR, glm::vec3(1.0f));
     _defaultEffectProperty->setParam(ForwardPhongEffect::SPECULAR_COLOR, glm::vec3(1.0f));
-    _defaultEffectProperty->setParam(ForwardPhongEffect::DIFFUSE_REFLECTION, 1.0f);
-    _defaultEffectProperty->setParam(ForwardPhongEffect::SPECULAR_REFLECTION, 1.0f);
     _defaultEffectProperty->setParam(ForwardPhongEffect::SHININESS, 32.0f);
+
 }
 
 
@@ -160,8 +161,241 @@ void ImportMeshFilePlugin::dragEnterEvent(QDragEnterEvent *event) {
 void ImportMeshFilePlugin::dropEvent(QDropEvent *event) {
     auto urls = event->mimeData()->urls();
     for (const auto &url : urls) {
-        if (url.path().endsWith(".obj")) {
-            // parse OBJ file
+        if (url.isLocalFile() && url.path().endsWith(".obj") ) {
+            loadMeshFile(url.path().toStdString());
         }
     }
+}
+
+
+void ImportMeshFilePlugin::loadMeshFile(const std::string &file) {
+    std::string baseDir = getBaseDir(file);
+    if (baseDir.empty())
+        baseDir = ".";
+#ifdef _WIN32
+    baseDir += "\\";
+#else
+    baseDir += "/";
+#endif
+
+    std::string warn;
+    std::string error;
+    tinyobj::attrib_t attrib_t;
+    std::vector<tinyobj::shape_t> shape_ts;
+    std::vector<tinyobj::material_t> material_ts;
+    bool ret = tinyobj::LoadObj(&attrib_t,
+                                &shape_ts,
+                                &material_ts,
+                                &warn,
+                                &error,
+                                file.c_str(),
+                                baseDir.c_str(),
+                                true,
+                                true);
+
+    if (!ret) {
+        // TODO: display error message here
+        return;
+    }
+
+    // clear existing mesh for now
+    auto &context = _viewer->getDrawContext();
+    context.getRoot().clearChild();
+
+    // add imported mesh to the scene
+    std::vector<std::shared_ptr<EffectProperty>> effectProperties;
+    for (const auto &material_t : material_ts) {
+        std::shared_ptr<EffectProperty> effectProperty = processMaterial(material_t);
+        effectProperties.push_back(std::move(effectProperty));
+    }
+
+    for (const auto &shape_t : shape_ts) {
+        processShape(shape_t, attrib_t, effectProperties);
+    }
+}
+
+
+std::string ImportMeshFilePlugin::getBaseDir(const std::string &file) {
+    auto pos = file.find_last_of("\\/");
+    if (pos != std::string::npos)
+        return file.substr(0, pos);
+
+    return "";
+}
+
+
+std::shared_ptr<EffectProperty> ImportMeshFilePlugin::processMaterial(const tinyobj::material_t &material_t) {
+    glm::vec3 ambientColor = glm::vec3(material_t.ambient[0], material_t.ambient[1], material_t.ambient[2]);
+    glm::vec3 diffuseColor = glm::vec3(material_t.diffuse[0], material_t.diffuse[1], material_t.diffuse[2]);
+    glm::vec3 specularColor = glm::vec3(material_t.specular[0], material_t.specular[1], material_t.specular[2]);
+    float shininess = equals(material_t.shininess, 0.0f) ? 1.0f : material_t.shininess;
+
+    // set phong property for imported mesh
+    auto &context = _viewer->getDrawContext();
+    auto forwardPhongEffect = context.getEffect(ForwardPhongEffect::EFFECT_NAME);
+    auto effectProperty = forwardPhongEffect->createEffectProperty();
+    effectProperty.setParam(ForwardPhongEffect::AMBIENT_COLOR, ambientColor);
+    effectProperty.setParam(ForwardPhongEffect::DIFFUSE_COLOR, diffuseColor);
+    effectProperty.setParam(ForwardPhongEffect::SPECULAR_COLOR, specularColor);
+    effectProperty.setParam(ForwardPhongEffect::SHININESS, shininess);
+
+    return std::make_shared<EffectProperty>(std::move(effectProperty));
+}
+
+
+void ImportMeshFilePlugin::processShape(const tinyobj::shape_t &shape_t,
+                                        const tinyobj::attrib_t &attrib_t,
+                                        const std::vector<std::shared_ptr<EffectProperty>> &effectProperties)
+{
+    // find the size of position, color, normal, and texCoord
+    unsigned numOfElement = 0;
+    std::unordered_map<int, unsigned> posToElem;
+    std::unordered_set<int> uniqueNormal, uniqueTexCoord;
+    for (const auto &index_t : shape_t.mesh.indices) {
+        if (index_t.vertex_index >= 0 &&  (posToElem.find(index_t.vertex_index) == posToElem.end()))
+            posToElem.insert({index_t.vertex_index, numOfElement++});
+
+        if (index_t.normal_index >= 0)
+            uniqueNormal.insert(index_t.normal_index);
+
+        if (index_t.texcoord_index >= 0)
+            uniqueTexCoord.insert(index_t.texcoord_index);
+    }
+
+    // find the position, color, normal, and texCoord
+    std::vector<unsigned> elements;
+    std::vector<glm::vec3> positions(posToElem.size());
+    std::vector<glm::vec3> normals(posToElem.size());
+    std::vector<glm::vec2> texCoords;
+    if (uniqueTexCoord.size() > 0)
+        texCoords.resize(posToElem.size());
+
+    std::size_t indexOffset = 0;
+    for (auto vertPerFace : shape_t.mesh.num_face_vertices) {
+        for (auto i = indexOffset; i < indexOffset + vertPerFace; ++i) {
+            auto index_t = shape_t.mesh.indices[i];
+
+            auto element = posToElem.at(index_t.vertex_index);
+            elements.push_back(element);
+
+            // position
+            positions[element] = retrievePositionAttrib_t(attrib_t, index_t);
+
+            // normal
+            if (uniqueNormal.size() > 0)
+                normals[element] += retrieveNormalAttrib_t(attrib_t, index_t);
+            else
+                normals[element] += calcSurfaceNormal(attrib_t, shape_t, indexOffset);
+
+            // texture coordinate
+            if (uniqueTexCoord.size() > 0) {
+                texCoords[element] = retrieveTexCoordAttrib_t(attrib_t, index_t);
+            }
+        }
+
+        indexOffset += vertPerFace;
+    }
+
+    std::for_each(normals.begin(), normals.end(), [](glm::vec3 &n){
+        if (!equals(glm::length(n), 0.0f))
+            n = glm::normalize(n);
+    });
+
+
+    // create VAO and Buffer
+    int positionCount = static_cast<int>(positions.size() * sizeof(glm::vec3));
+    int normalCount = static_cast<int>(normals.size() * sizeof(glm::vec3));
+    int positionOffset = -1;
+    int normalOffset = -1;
+
+    auto &context = _viewer->getDrawContext();
+    GLVertexArray vao = context.getDriver().createVertexArray(elements.data(), elements.size(), GL_STATIC_DRAW);
+    GLBuffer buffer = context.getDriver().createBuffer(GL_ARRAY_BUFFER, GL_STATIC_DRAW);
+    buffer.bind();
+    buffer.loadData(nullptr, positionCount + normalCount);
+    if (!positions.empty()) {
+        positionOffset = 0;
+        buffer.loadSubData(positionOffset, positions.data(), positionCount);
+    }
+
+    if (!normals.empty()) {
+        normalOffset = positionCount;
+        buffer.loadSubData(normalOffset, normals.data(), normalCount);
+    }
+
+
+    // create geometries
+    std::shared_ptr<GLVertexArray> vaoptr = std::make_shared<GLVertexArray>(std::move(vao));
+    std::shared_ptr<GLBuffer> bufferptr = std::make_shared<GLBuffer>(std::move(buffer));
+    auto &rootNode = context.getRoot();
+    const auto &materials_ids = shape_t.mesh.material_ids;
+    std::size_t idx = 0;
+    while (idx < materials_ids.size()) {
+        std::size_t right = idx+1;
+        while(right < materials_ids.size() && materials_ids[right] == materials_ids[idx]) {
+            ++right;
+        }
+
+        auto drawable = context.createDrawable<Geometry>(vaoptr,
+                                                         bufferptr,
+                                                         (right - idx) * 3,
+                                                         idx * 3 * sizeof(unsigned),
+                                                         positionOffset,
+                                                         normalOffset);
+
+        drawable->setName(shape_t.name + "_mat" + std::to_string(idx));
+
+        if (materials_ids[idx] >= 0) {
+            drawable->setEffectProperty(effectProperties[materials_ids[idx]]);
+        }
+        else {
+            drawable->setEffectProperty(_defaultEffectProperty);
+        }
+
+        rootNode.emplaceChild(std::move(drawable));
+        idx = right;
+    }
+}
+
+
+glm::vec3 ImportMeshFilePlugin::calcSurfaceNormal(const tinyobj::attrib_t &attrib_t, const tinyobj::shape_t &shape_t, std::size_t beginPoint) {
+    auto beginIdx = shape_t.mesh.indices[beginPoint];
+    auto secIdx = shape_t.mesh.indices[beginPoint+1];
+    auto lastIdx = shape_t.mesh.indices[beginPoint+2];
+
+    glm::vec3 p1 = retrievePositionAttrib_t(attrib_t, beginIdx);
+    glm::vec3 p2 = retrievePositionAttrib_t(attrib_t, secIdx);
+    glm::vec3 p3 = retrievePositionAttrib_t(attrib_t, lastIdx);
+    glm::vec3 normal = glm::cross(p2-p1, p3-p1);
+
+    if (!equals(glm::length(normal), 0.0f))
+        return glm::normalize(normal);
+
+    return normal;
+}
+
+
+glm::vec3 ImportMeshFilePlugin::retrievePositionAttrib_t(const tinyobj::attrib_t &attrib_t, tinyobj::index_t idx) {
+    auto px = attrib_t.vertices[3 * idx.vertex_index + 0];
+    auto py = attrib_t.vertices[3 * idx.vertex_index + 1];
+    auto pz = attrib_t.vertices[3 * idx.vertex_index + 2];
+
+    return {px, py, pz};
+}
+
+
+glm::vec3 ImportMeshFilePlugin::retrieveNormalAttrib_t(const tinyobj::attrib_t &attrib_t, tinyobj::index_t idx) {
+    auto nx = attrib_t.normals[3 * idx.normal_index + 0];
+    auto ny = attrib_t.normals[3 * idx.normal_index + 1];
+    auto nz = attrib_t.normals[3 * idx.normal_index + 2];
+
+    return {nx, ny, nz};
+}
+
+
+glm::vec2 ImportMeshFilePlugin::retrieveTexCoordAttrib_t(const tinyobj::attrib_t &attrib_t, tinyobj::index_t idx) {
+    auto tx = attrib_t.texcoords[2 * idx.texcoord_index + 0];
+    auto ty = attrib_t.texcoords[2 * idx.texcoord_index + 1];
+
+    return {tx, ty};
 }

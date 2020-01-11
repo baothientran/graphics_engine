@@ -6,9 +6,9 @@ int main(int argc, char *argv[])
 {
     QGuiApplication a(argc, argv);
 
-    Viewer w(16);
+    Viewer w(4);
     w.resize(1000, 1000);
-    w.setAnimating(true);
+    w.setAnimating(false);
     w.show();
 
     return a.exec();

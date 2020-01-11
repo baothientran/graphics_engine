@@ -31,10 +31,9 @@ public:
 
     static const std::string EFFECT_NAME;
 
+    static const std::string AMBIENT_COLOR;
     static const std::string DIFFUSE_COLOR;
     static const std::string SPECULAR_COLOR;
-    static const std::string DIFFUSE_REFLECTION;
-    static const std::string SPECULAR_REFLECTION;
     static const std::string SHININESS;
 
 private:

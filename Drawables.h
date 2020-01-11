@@ -15,10 +15,12 @@ class Geometry : public Drawable {
 
 public:
     Geometry(DrawContext *context,
-             unsigned usage,
-             const std::vector<unsigned> &elements,
-             const std::vector<glm::vec3> &positions,
-             const std::vector<glm::vec3> &normals);
+             std::shared_ptr<GLVertexArray> vao,
+             std::shared_ptr<GLBuffer> buffer,
+             unsigned numOfElement,
+             unsigned elementOffset,
+             int positionOffset,
+             int normalOffset);
 
     Geometry(const Geometry &) = delete;
 
@@ -28,9 +30,7 @@ public:
 
     Geometry &operator=(Geometry &&) = default;
 
-    void setEffectProperty(const EffectProperty &effectProperty) override;
-
-    void setEffectProperty(EffectProperty &&effectProperty) override;
+    void setEffectProperty(std::shared_ptr<EffectProperty> effectProperty) override;
 
     inline const EffectProperty *getEffectProperty() const override;
 
@@ -44,10 +44,11 @@ public:
 private:
     void enableAttribute(const Effect *effect, const GLAttribute &requiredAttribute, int offset);
 
-    std::optional<EffectProperty> _effectProperty;
-    std::optional<GLBuffer> _buffer;
-    std::optional<GLVertexArray> _vao;
-    unsigned _vertexCount;
+    std::shared_ptr<EffectProperty> _effectProperty;
+    std::shared_ptr<GLVertexArray> _vao;
+    std::shared_ptr<GLBuffer> _buffer;
+    unsigned _numOfElements;
+    unsigned _elementOffset;
     int _positionsOffset;
     int _normalsOffset;
 };

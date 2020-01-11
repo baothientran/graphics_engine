@@ -362,7 +362,7 @@ void GLBuffer::loadSubData(int offset, const void *data, int count) {
 /***************************************************
  * GLVertexArray definitions
  ***************************************************/
-GLVertexArray::GLVertexArray(GLDriver *driver, const std::vector<unsigned> &elements, unsigned usage)
+GLVertexArray::GLVertexArray(GLDriver *driver, const unsigned *elements, int numOfElements, unsigned usage)
     : _driver{driver}
 {
     auto GL = _driver->GL();
@@ -370,7 +370,7 @@ GLVertexArray::GLVertexArray(GLDriver *driver, const std::vector<unsigned> &elem
     bind();
     _elementBuffer = _driver->createBuffer(GL_ELEMENT_ARRAY_BUFFER, usage);
     _elementBuffer->bind();
-    _elementBuffer->loadData(elements.data(), static_cast<int>(elements.size() * sizeof(unsigned)));
+    _elementBuffer->loadData(elements, numOfElements * static_cast<int>(sizeof(unsigned)));
     unbind();
     _elementBuffer->unbind();
 }
@@ -494,8 +494,8 @@ GLBuffer GLDriver::createBuffer(unsigned target, unsigned usage) {
 }
 
 
-GLVertexArray GLDriver::createVertexArray(const std::vector<unsigned> &elements, unsigned usage) {
-    return {this, elements, usage};
+GLVertexArray GLDriver::createVertexArray(const unsigned *elements, int numOfElements,  unsigned usage) {
+    return {this, elements, numOfElements, usage};
 }
 
 

@@ -7,10 +7,9 @@
  ***************************************************/
 const std::string ForwardPhongEffect::EFFECT_NAME = "ForwardPhongEffect";
 
+const std::string ForwardPhongEffect::AMBIENT_COLOR = "ambientColor";
 const std::string ForwardPhongEffect::DIFFUSE_COLOR = "diffuseColor";
 const std::string ForwardPhongEffect::SPECULAR_COLOR = "specularColor";
-const std::string ForwardPhongEffect::DIFFUSE_REFLECTION = "diffuseReflection";
-const std::string ForwardPhongEffect::SPECULAR_REFLECTION = "specularReflection";
 const std::string ForwardPhongEffect::SHININESS = "shininess";
 
 const std::string ForwardPhongEffect::MVP_MAT = "modelViewProjMat";
@@ -42,10 +41,9 @@ ForwardPhongEffect::ForwardPhongEffect(DrawContext *context)
     _effectUniforms.insert({LIGHT_RADIUS, uniforms.at(LIGHT_RADIUS)});
 
     // drawable uniforms
+    _drawableUniforms.insert({AMBIENT_COLOR, uniforms.at(AMBIENT_COLOR)});
     _drawableUniforms.insert({DIFFUSE_COLOR, uniforms.at(DIFFUSE_COLOR)});
     _drawableUniforms.insert({SPECULAR_COLOR, uniforms.at(SPECULAR_COLOR)});
-    _drawableUniforms.insert({DIFFUSE_REFLECTION, uniforms.at(DIFFUSE_REFLECTION)});
-    _drawableUniforms.insert({SPECULAR_REFLECTION, uniforms.at(SPECULAR_REFLECTION)});
     _drawableUniforms.insert({SHININESS, uniforms.at(SHININESS)});
 
 #ifndef NDEBUG
@@ -76,15 +74,15 @@ void ForwardPhongEffect::draw(const std::vector<Drawable *> &drawables) {
         // apply transformation
         glm::mat4 mv = camera.getViewMatrix() * drawable->getTransformation();
         glm::mat4 mvp = camera.getProjMatrix() * mv;
-        glm::mat4 normalMat = glm::transpose(glm::inverse(mv));
-        glm::vec4 lightViewPosition = camera.getViewMatrix() * glm::vec4(1.0f, 1.0f, 0.5f, 1.0f);
+        glm::mat4 normalMat = glm::inverse(glm::transpose(mv));
+        glm::vec4 lightViewPosition = camera.getViewMatrix() * glm::vec4(100.0f, 100.0f, 0.0f, 1.0f);
         _effectUniforms.at(MVP_MAT).setValue(mvp);
         _effectUniforms.at(MV_MAT).setValue(mv);
         _effectUniforms.at(NORMAL_MAT).setValue(normalMat);
         _effectUniforms.at(LIGHT_POSITION).setValue(lightViewPosition.xyz());
-        _effectUniforms.at(LIGHT_COLOR).setValue(glm::vec3(12.0f));
-        _effectUniforms.at(LIGHT_AMBIENT).setValue(glm::vec3(0.5f));
-        _effectUniforms.at(LIGHT_RADIUS).setValue(3.55f);
+        _effectUniforms.at(LIGHT_COLOR).setValue(glm::vec3(2.0f));
+        _effectUniforms.at(LIGHT_AMBIENT).setValue(glm::vec3(0.2f));
+        _effectUniforms.at(LIGHT_RADIUS).setValue(600.0f);
 
         // apply effectwise uniforms
         for (const auto &uniform : _effectUniforms) {

@@ -12,7 +12,7 @@ uniform mat4 normalMat;
 
 void main() {
     gl_Position = modelViewProjMat * vec4(vPosition, 1.0);
-    vec4 normal = normalMat * vec4(vNormal, 1.0);
+    vec4 normal = normalMat * vec4(vNormal, 0.0);
     vec4 viewVertex = modelViewMat * vec4(vPosition, 1.0);
 
     fNormal = normal.xyz;

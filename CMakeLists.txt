@@ -31,6 +31,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
 find_package(glm CONFIG REQUIRED)
+find_package(tinyobjloader CONFIG REQUIRED)
 
 add_executable(GraphicsEngine
     shaders/ForwardPhongVert.glsl
@@ -54,6 +55,6 @@ add_executable(GraphicsEngine
     Plugins.cpp
 )
 
-target_link_libraries(GraphicsEngine PRIVATE Qt5::Widgets)
+target_link_libraries(GraphicsEngine PRIVATE Qt5::Widgets tinyobjloader::tinyobjloader)
 
 file(COPY shaders DESTINATION ${PROJECT_BINARY_DIR})
