@@ -17,7 +17,6 @@ public:
               const std::vector<PointLight *> &pointLights) override;
 
     static const std::string EFFECT_NAME;
-
     static const std::string AMBIENT_COLOR;
     static const std::string DIFFUSE_COLOR;
     static const std::string SPECULAR_COLOR;
