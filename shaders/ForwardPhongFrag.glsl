@@ -17,10 +17,6 @@ out vec4 color;
 uniform vec3 lightAmbient;
 
 uniform PointLight pointLights[MAX_LIGHTS];
-//uniform vec3 lightPosition[MAX_LIGHTS];
-//uniform vec3 lightColor[MAX_LIGHTS];
-//uniform float lightRadius[MAX_LIGHTS];
-
 
 uniform vec3 ambientColor;
 uniform vec3 diffuseColor;
