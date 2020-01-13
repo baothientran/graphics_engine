@@ -94,12 +94,12 @@ public:
         return newlyAdded;
     }
 
-    inline void removeChild(Iterator pos) {
-        _children.erase(pos);
+    inline Iterator removeChild(Iterator pos) {
+        return _children.erase(pos);
     }
 
-    inline void removeChild(ConstIterator pos) {
-        _children.erase(pos);
+    inline ConstIterator removeChild(ConstIterator pos) {
+        return _children.erase(pos);
     }
 
     inline void clearChild() {

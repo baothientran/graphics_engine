@@ -8,6 +8,7 @@
 class DrawContext;
 class Effect;
 class Drawable;
+class PointLight;
 
 
 class Camera {
@@ -93,7 +94,8 @@ public:
 
     virtual EffectProperty createEffectProperty() = 0;
 
-    virtual void draw(const std::vector<Drawable*> &drawables) = 0;
+    virtual void draw(const std::vector<Drawable*> &drawables,
+                      const std::vector<PointLight *> &pointLights) = 0;
 
 protected:
     DrawContext *_context;
@@ -120,7 +122,7 @@ public:
 
     inline glm::mat4 getTransformation() const { return _transformation; }
 
-    virtual void setEffectProperty(std::shared_ptr<EffectProperty>) {}
+    virtual PointLight *asPointLight() { return nullptr; }
 
     virtual const EffectProperty *getEffectProperty() const { return nullptr; }
 
@@ -146,6 +148,8 @@ public:
     inline const SceneNode &getRoot() const { return _root; }
 
     inline SceneNode &getRoot() { return _root; }
+
+    Drawable *getPointLightGeometry();
 
     template<typename DrawableDerived, typename... Args>
     std::unique_ptr<DrawableDerived> createDrawable(Args&&... args) {
@@ -179,6 +183,9 @@ public:
     inline const Camera &getCamera() const { return _camera; }
 
 private:
+    std::unique_ptr<Drawable> createPointLightGeometry();
+
+    std::unique_ptr<Drawable> _pointLightGeometry;
     Camera _camera;
     GLDriver _driver;
     SceneNode _root{nullptr};

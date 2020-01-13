@@ -47,6 +47,8 @@ add_executable(GraphicsEngine
     DrawContext.cpp
     Drawables.h
     Drawables.cpp
+    BasicGeometry.h
+    BasicGeometry.cpp
     Effects.h
     Effects.cpp
     Viewer.h

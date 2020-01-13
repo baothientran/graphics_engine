@@ -36,6 +36,12 @@ void Viewer::initialize() {
     _cameraControlPlugin = std::make_unique<OrbitCameraPlugin>(this);
     _cameraProjectionPlugin = std::make_unique<PerspectiveCameraPlugin>(this);
     _importMeshFilePlugin = std::make_unique<ImportMeshFilePlugin>(this);
+
+    // initialize scene
+    auto &root = _context.getRoot();
+    auto pointLight = _context.createDrawable<PointLight>(glm::vec3(2.0f), 1000.0f);
+    auto &lightNode = root.emplaceChild(std::move(pointLight));
+    lightNode.position() = glm::vec3{250.0f, 250.0f, 250.0f};
 }
 
 
@@ -50,7 +56,7 @@ void Viewer::render(QPainter *) {
     // reset drivers
     auto &driver = _context.getDriver();
     driver.clearBufferBit(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    driver.clearColor({0.0f, 0.0f, 0.0f, 1.0f});
+    driver.clearColor({0.23f, 0.23f, 0.23f, 1.0f});
     driver.setViewport(0, 0, width(), height());
 
     _context.getRoot().draw();

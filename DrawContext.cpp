@@ -1,6 +1,9 @@
 #include <utility>
 #include <glm/gtc/matrix_transform.hpp>
 #include "DrawContext.h"
+#include "Effects.h"
+#include "Drawables.h"
+#include "BasicGeometry.h"
 
 
 /***************************************************************
@@ -94,26 +97,70 @@ GLUniform *EffectProperty::getParam(const std::string &name) {
 }
 
 
+/***************************************************************
+ * DrawContext definitions
+ ***************************************************************/
+Drawable *DrawContext::getPointLightGeometry() {
+    if (!_pointLightGeometry) {
+        _pointLightGeometry = createPointLightGeometry();
+    }
+
+    return _pointLightGeometry.get();
+}
+
+
+std::unique_ptr<Drawable> DrawContext::createPointLightGeometry() {
+    unsigned longDivisons = 20;
+    unsigned latDivisions = 20;
+    float radius = 5.0f;
+
+    auto effect = getEffect(ForwardPhongEffect::EFFECT_NAME);
+    auto effectProperty = effect->createEffectProperty();
+    effectProperty.setParam(ForwardPhongEffect::AMBIENT_COLOR, glm::vec3(1.0f));
+    effectProperty.setParam(ForwardPhongEffect::DIFFUSE_COLOR, glm::vec3(1.0f));
+    effectProperty.setParam(ForwardPhongEffect::SPECULAR_COLOR, glm::vec3(1.0f));
+    effectProperty.setParam(ForwardPhongEffect::SHININESS, 32.0f);
+    auto sphere = createSphere(this,
+                               std::make_shared<EffectProperty>(std::move(effectProperty)),
+                               longDivisons, latDivisions, radius);
+
+    return sphere;
+}
+
+
+
+
 /***************************************************
  * NodeAction definitions
  ***************************************************/
-static void createDrawRequest(DrawContext::SceneNode &node, glm::mat4 transformation, std::map<Effect *, std::vector<Drawable *>> &drawRequests) {
+static void createDrawRequest(DrawContext::SceneNode &node, glm::mat4 transformation,
+                              std::map<Effect *, std::vector<Drawable *>> &drawRequests,
+                              std::vector<PointLight *> &pointLights)
+{
     transformation = glm::scale(transformation, node.scale());
     transformation = glm::rotate(transformation, glm::angle(node.rotation()), glm::axis(node.rotation()));
     transformation = glm::translate(transformation, node.position());
 
     auto &drawable = node.getDrawable();
     if (drawable) {
+        drawable->setTransformation(transformation);
+
+        // check if it is point light
+        auto pointLight = drawable->asPointLight();
+        if (pointLight) {
+            pointLights.push_back(pointLight);
+        }
+
+        // map drawable to effects
         auto effectProperty = drawable->getEffectProperty();
         if (effectProperty) {
-            drawable->setTransformation(transformation);
             auto effect = effectProperty->getEffect();
             drawRequests[effect].push_back(drawable.get());
         }
     }
 
     for (auto child = node.childBegin(); child != node.childEnd(); ++child) {
-        createDrawRequest(*child, transformation, drawRequests);
+        createDrawRequest(*child, transformation, drawRequests, pointLights);
     }
 }
 
@@ -133,8 +180,9 @@ static glm::mat4 parentTransformation(DrawContext::SceneNode *node) {
 
 void NodeAction<std::unique_ptr<Drawable>>::draw(DrawContext::SceneNode &node) {
     std::map<Effect *, std::vector<Drawable *>> drawRequest;
+    std::vector<PointLight *> pointLights;
     glm::mat4 transformation = parentTransformation(node.getParent());
-    createDrawRequest(node, transformation, drawRequest);
+    createDrawRequest(node, transformation, drawRequest, pointLights);
 
     for (auto &request : drawRequest) {
         // reset driver
@@ -164,7 +212,7 @@ void NodeAction<std::unique_ptr<Drawable>>::draw(DrawContext::SceneNode &node) {
 
         // draw scene node
         auto &drawables = request.second;
-        effect->draw(drawables);
+        effect->draw(drawables, pointLights);
     }
 }
 

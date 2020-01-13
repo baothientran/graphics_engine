@@ -165,6 +165,8 @@ void ImportMeshFilePlugin::dropEvent(QDropEvent *event) {
             loadMeshFile(url.path().toStdString());
         }
     }
+
+    _viewer->renderLater();
 }
 
 
@@ -198,9 +200,18 @@ void ImportMeshFilePlugin::loadMeshFile(const std::string &file) {
         return;
     }
 
-    // clear existing mesh for now
+    // clear existing mesh for now. TODO: develop UI so user will do it themselves
     auto &context = _viewer->getDrawContext();
-    context.getRoot().clearChild();
+    auto &rootNode = context.getRoot();
+    auto it = rootNode.childBegin();
+    while (it != rootNode.childEnd()) {
+        auto &drawable = it->getDrawable();
+        if (drawable->asPointLight()) {
+            ++it;
+        }
+        else
+            it = rootNode.removeChild(it);
+    }
 
     // add imported mesh to the scene
     std::vector<std::shared_ptr<EffectProperty>> effectProperties;
@@ -336,7 +347,16 @@ void ImportMeshFilePlugin::processShape(const tinyobj::shape_t &shape_t,
             ++right;
         }
 
-        auto drawable = context.createDrawable<Geometry>(vaoptr,
+        std::shared_ptr<EffectProperty> effectProperty;
+        if (materials_ids[idx] >= 0) {
+            effectProperty = effectProperties[materials_ids[idx]];
+        }
+        else {
+            effectProperty = _defaultEffectProperty;
+        }
+
+        auto drawable = context.createDrawable<Geometry>(std::move(effectProperty),
+                                                         vaoptr,
                                                          bufferptr,
                                                          (right - idx) * 3,
                                                          idx * 3 * sizeof(unsigned),
@@ -344,13 +364,6 @@ void ImportMeshFilePlugin::processShape(const tinyobj::shape_t &shape_t,
                                                          normalOffset);
 
         drawable->setName(shape_t.name + "_mat" + std::to_string(idx));
-
-        if (materials_ids[idx] >= 0) {
-            drawable->setEffectProperty(effectProperties[materials_ids[idx]]);
-        }
-        else {
-            drawable->setEffectProperty(_defaultEffectProperty);
-        }
 
         rootNode.emplaceChild(std::move(drawable));
         idx = right;

@@ -15,12 +15,19 @@ class Geometry : public Drawable {
 
 public:
     Geometry(DrawContext *context,
+             std::shared_ptr<EffectProperty> effectProperty,
              std::shared_ptr<GLVertexArray> vao,
              std::shared_ptr<GLBuffer> buffer,
              unsigned numOfElement,
              unsigned elementOffset,
              int positionOffset,
              int normalOffset);
+
+    Geometry(DrawContext *context,
+             std::shared_ptr<EffectProperty> effectProperty,
+             const std::vector<unsigned> &elements,
+             const std::vector<glm::vec3> &positions,
+             const std::vector<glm::vec3> &normals);
 
     Geometry(const Geometry &) = delete;
 
@@ -29,8 +36,6 @@ public:
     Geometry &operator=(const Geometry &) = delete;
 
     Geometry &operator=(Geometry &&) = default;
-
-    void setEffectProperty(std::shared_ptr<EffectProperty> effectProperty) override;
 
     inline const EffectProperty *getEffectProperty() const override;
 
@@ -42,6 +47,8 @@ public:
     static const GLAttribute NORMAL_ATTRIBUTE;
 
 private:
+    void setEffectProperty(std::shared_ptr<EffectProperty> effectProperty);
+
     void enableAttribute(const Effect *effect, const GLAttribute &requiredAttribute, int offset);
 
     std::shared_ptr<EffectProperty> _effectProperty;
@@ -53,5 +60,37 @@ private:
     int _normalsOffset;
 };
 
+
+class PointLight : public Drawable {
+public:
+    PointLight(DrawContext *context,
+               glm::vec3 lightColor,
+               float radius);
+
+    inline void setLightColor(glm::vec3 lightColor) {
+        _lightColor = lightColor;
+    }
+
+    inline glm::vec3 getLightColor() const { return _lightColor; }
+
+    inline void setRadius(float radius) {
+        _radius = radius;
+    }
+
+    inline float getRadius() const { return _radius; }
+
+    PointLight *asPointLight() override;
+
+    EffectProperty * getEffectProperty() override;
+
+    const EffectProperty * getEffectProperty() const override;
+
+    void draw() override;
+
+private:
+    Drawable *_geometry;
+    glm::vec3 _lightColor;
+    float _radius;
+};
 
 #endif // DRAWABLES_H

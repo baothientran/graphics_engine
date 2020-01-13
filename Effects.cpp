@@ -1,10 +1,14 @@
 #include "Effects.h"
 #include "Utility.h"
+#include "Drawables.h"
+#include <glm/gtc/matrix_access.hpp>
 
 
 /***************************************************
  * ForwardPhongEffect definitions
  ***************************************************/
+const std::size_t ForwardPhongEffect::PointLightUniforms::MAX = 10;
+
 const std::string ForwardPhongEffect::EFFECT_NAME = "ForwardPhongEffect";
 
 const std::string ForwardPhongEffect::AMBIENT_COLOR = "ambientColor";
@@ -15,10 +19,9 @@ const std::string ForwardPhongEffect::SHININESS = "shininess";
 const std::string ForwardPhongEffect::MVP_MAT = "modelViewProjMat";
 const std::string ForwardPhongEffect::MV_MAT = "modelViewMat";
 const std::string ForwardPhongEffect::NORMAL_MAT = "normalMat";
-const std::string ForwardPhongEffect::LIGHT_POSITION = "lightPosition";
-const std::string ForwardPhongEffect::LIGHT_COLOR = "lightColor";
 const std::string ForwardPhongEffect::LIGHT_AMBIENT = "lightAmbient";
-const std::string ForwardPhongEffect::LIGHT_RADIUS = "lightRadius";
+const ForwardPhongEffect::PointLightUniforms ForwardPhongEffect::POINT_LIGHTS;
+
 
 ForwardPhongEffect::ForwardPhongEffect(DrawContext *context)
     : Effect{context}
@@ -35,10 +38,15 @@ ForwardPhongEffect::ForwardPhongEffect(DrawContext *context)
     _effectUniforms.insert({MVP_MAT, uniforms.at(MVP_MAT)});
     _effectUniforms.insert({MV_MAT, uniforms.at(MV_MAT)});
     _effectUniforms.insert({NORMAL_MAT, uniforms.at(NORMAL_MAT)});
-    _effectUniforms.insert({LIGHT_POSITION, uniforms.at(LIGHT_POSITION)});
-    _effectUniforms.insert({LIGHT_COLOR, uniforms.at(LIGHT_COLOR)});
     _effectUniforms.insert({LIGHT_AMBIENT, uniforms.at(LIGHT_AMBIENT)});
-    _effectUniforms.insert({LIGHT_RADIUS, uniforms.at(LIGHT_RADIUS)});
+    for (std::size_t i = 0; i < PointLightUniforms::MAX; ++i) {
+        const auto &position = POINT_LIGHTS.positions[i];
+        const auto &color = POINT_LIGHTS.colors[i];
+        const auto &radius = POINT_LIGHTS.radius[i];
+        _effectUniforms.insert({position, uniforms.at(position)});
+        _effectUniforms.insert({color, uniforms.at(color)});
+        _effectUniforms.insert({radius, uniforms.at(radius)});
+    }
 
     // drawable uniforms
     _drawableUniforms.insert({AMBIENT_COLOR, uniforms.at(AMBIENT_COLOR)});
@@ -66,23 +74,33 @@ EffectProperty ForwardPhongEffect::createEffectProperty() {
 }
 
 
-void ForwardPhongEffect::draw(const std::vector<Drawable *> &drawables) {
+void ForwardPhongEffect::draw(const std::vector<Drawable *> &drawables,
+                              const std::vector<PointLight *> &pointLights) {
     _program->bind();
-
     const auto &camera = _context->getCamera();
+
+    // draw ambient and directional light. TODO: hardcode for now
+    _effectUniforms.at(LIGHT_AMBIENT).setValue(glm::vec3(0.2f));
+
+    // draw point lights
+    for (std::size_t i = 0; i < std::min(PointLightUniforms::MAX, pointLights.size()); ++i) {
+        auto pointLight = pointLights[i];
+        glm::vec4 lightPosition = glm::column(pointLight->getTransformation(), 3);
+        glm::vec4 lightViewPosition = camera.getViewMatrix() * lightPosition;
+        _effectUniforms.at(POINT_LIGHTS.positions[i]).setValue(lightViewPosition.xyz());
+        _effectUniforms.at(POINT_LIGHTS.colors[i]).setValue(pointLight->getLightColor());
+        _effectUniforms.at(POINT_LIGHTS.radius[i]).setValue(pointLight->getRadius());
+    }
+
+    // draw drawables
     for (auto drawable : drawables) {
         // apply transformation
         glm::mat4 mv = camera.getViewMatrix() * drawable->getTransformation();
         glm::mat4 mvp = camera.getProjMatrix() * mv;
         glm::mat4 normalMat = glm::inverse(glm::transpose(mv));
-        glm::vec4 lightViewPosition = camera.getViewMatrix() * glm::vec4(100.0f, 100.0f, 0.0f, 1.0f);
         _effectUniforms.at(MVP_MAT).setValue(mvp);
         _effectUniforms.at(MV_MAT).setValue(mv);
         _effectUniforms.at(NORMAL_MAT).setValue(normalMat);
-        _effectUniforms.at(LIGHT_POSITION).setValue(lightViewPosition.xyz());
-        _effectUniforms.at(LIGHT_COLOR).setValue(glm::vec3(2.0f));
-        _effectUniforms.at(LIGHT_AMBIENT).setValue(glm::vec3(0.2f));
-        _effectUniforms.at(LIGHT_RADIUS).setValue(600.0f);
 
         // apply effectwise uniforms
         for (const auto &uniform : _effectUniforms) {
