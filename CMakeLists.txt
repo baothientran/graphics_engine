@@ -21,6 +21,8 @@ find_package(glm CONFIG REQUIRED)
 find_package(tinyobjloader CONFIG REQUIRED)
 
 add_executable(GraphicsEngine
+    shaders/ColorFrag.glsl
+    shaders/ColorVert.glsl
     shaders/ForwardPhongVert.glsl
     shaders/ForwardPhongFrag.glsl
     Main.cpp

@@ -5,6 +5,76 @@
 
 
 /***************************************************
+ * ColorEffect definitions
+ ***************************************************/
+const std::string ColorEffect::EFFECT_NAME = "ColorEffect";
+const std::string ColorEffect::COLOR = "color";
+const std::string ColorEffect::MVP_MAT = "modelViewProjMat";
+
+ColorEffect::ColorEffect(DrawContext *context)
+    : Effect{context}
+{
+    auto &driver = context->getDriver();
+    _program = driver.createProgram({
+        {GL_VERTEX_SHADER,   readTextFile("shaders/ColorVert.glsl")},
+        {GL_FRAGMENT_SHADER, readTextFile("shaders/ColorFrag.glsl")},
+    });
+
+    auto uniforms = _program->getUniforms();
+
+    // effect wise uniforms
+    _effectUniforms.insert({MVP_MAT, uniforms.at(MVP_MAT)});
+
+    // drawable uniforms
+    _drawableUniforms.insert({COLOR, uniforms.at(COLOR)});
+
+    _attributes = _program->getAttributes();
+}
+
+
+const std::map<std::string, int> &ColorEffect::getAttributes() const {
+    return _attributes;
+}
+
+
+EffectProperty ColorEffect::createEffectProperty() {
+    return {this, _drawableUniforms};
+}
+
+
+void ColorEffect::draw(const std::vector<Drawable *> &drawables,
+                       const std::vector<PointLight *> &)
+{
+    _program->bind();
+    const auto &camera = _context->getCamera();
+
+    for (auto drawable : drawables) {
+        // set transformation
+        glm::mat4 mvp = camera.getProjMatrix() * camera.getViewMatrix() * drawable->getTransformation();
+        _effectUniforms.at(MVP_MAT).setValue(mvp);
+
+        // apply effectwise uniforms
+        for (const auto &uniform : _effectUniforms) {
+            _program->applyUniform(uniform.second);
+        }
+
+        // apply individual uniforms
+        auto effectProperty = drawable->getEffectProperty();
+        for (const auto &uniform : *effectProperty) {
+            _program->applyUniform(uniform.second);
+        }
+
+        // draw
+        drawable->draw();
+    }
+
+    _program->unbind();
+}
+
+
+
+
+/***************************************************
  * ForwardPhongEffect definitions
  ***************************************************/
 const std::size_t ForwardPhongEffect::PointLightUniforms::MAX = 10;

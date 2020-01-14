@@ -30,6 +30,7 @@ Viewer::Viewer(int sample, QWindow *parent)
 
 void Viewer::initialize() {
     // initialize effects
+    _context.createEffect<ColorEffect>(ColorEffect::EFFECT_NAME);
     _context.createEffect<ForwardPhongEffect>(ForwardPhongEffect::EFFECT_NAME);
 
     // initialize plugins

@@ -5,6 +5,30 @@
 #include "DrawContext.h"
 
 
+class ColorEffect : public Effect {
+public:
+    ColorEffect(DrawContext *context);
+
+    const std::map<std::string, int> &getAttributes() const override;
+
+    EffectProperty createEffectProperty() override;
+
+    void draw(const std::vector<Drawable*> &drawables,
+              const std::vector<PointLight *> &pointLights) override;
+
+    static const std::string EFFECT_NAME;
+    static const std::string COLOR;
+
+private:
+    static const std::string MVP_MAT;
+
+    std::optional<GLProgram> _program;
+    std::map<std::string, GLUniform> _effectUniforms;
+    std::map<std::string, GLUniform> _drawableUniforms;
+    std::map<std::string, int> _attributes;
+};
+
+
 class ForwardPhongEffect : public Effect {
 public:
     ForwardPhongEffect(DrawContext *context);

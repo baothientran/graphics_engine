@@ -12,7 +12,7 @@ struct PointLight {
 in vec3 fViewVertex;
 in vec3 fNormal;
 
-out vec4 color;
+out vec4 outColor;
 
 uniform vec3 lightAmbient;
 
@@ -43,5 +43,5 @@ void main() {
         diffuseSpecular += attenuation * (diffuse + specular);
     }
 
-    color = vec4(ambient + diffuseSpecular, 1.0);
+    outColor = vec4(ambient + diffuseSpecular, 1.0);
 }

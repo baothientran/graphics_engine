@@ -112,14 +112,11 @@ Drawable *DrawContext::getPointLightGeometry() {
 std::unique_ptr<Drawable> DrawContext::createPointLightGeometry() {
     unsigned longDivisons = 20;
     unsigned latDivisions = 20;
-    float radius = 5.0f;
+    float radius = 10.0f;
 
-    auto effect = getEffect(ForwardPhongEffect::EFFECT_NAME);
+    auto effect = getEffect(ColorEffect::EFFECT_NAME);
     auto effectProperty = effect->createEffectProperty();
-    effectProperty.setParam(ForwardPhongEffect::AMBIENT_COLOR, glm::vec3(1.0f));
-    effectProperty.setParam(ForwardPhongEffect::DIFFUSE_COLOR, glm::vec3(1.0f));
-    effectProperty.setParam(ForwardPhongEffect::SPECULAR_COLOR, glm::vec3(1.0f));
-    effectProperty.setParam(ForwardPhongEffect::SHININESS, 32.0f);
+    effectProperty.setParam(ColorEffect::COLOR, glm::vec3(1.0f));
     auto sphere = createSphere(this,
                                std::make_shared<EffectProperty>(std::move(effectProperty)),
                                longDivisons, latDivisions, radius);
