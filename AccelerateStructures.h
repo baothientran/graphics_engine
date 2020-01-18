@@ -62,11 +62,39 @@ public:
         if (_pendingNodes.empty())
             return;
 
-        glm::vec3 dimension = _boundingBox.getMax() - _boundingBox.getMin();
+        glm::vec3 min = _boundingBox.getMin();
+        glm::vec3 max = _boundingBox.getMax();
+        glm::vec3 dimension = max - min;
         if (dimension.x < DIM_MIN || dimension.y < DIM_MIN || dimension.z < DIM_MIN)
             return;
 
+        // split the current bounding box into 8 smaller bounding boxes
+        std::array<BoundingBox, 8> boundings;
+        boundings[0].setMin(min);
+        boundings[0].setMax(boundings[0].getMin() + dimension / 2.0f);
 
+        boundings[1].setMin(min + glm::vec3(0.0f, dimension.y / 2.0f, 0.0f));
+        boundings[1].setMax(boundings[1].getMin() + dimension / 2.0f);
+
+        boundings[2].setMin(min + glm::vec3(dimension.x / 2.0f, dimension.y / 2.0f, 0.0f));
+        boundings[2].setMax(boundings[2].getMin() + dimension / 2.0f);
+
+        boundings[3].setMin(min + glm::vec3(dimension.x / 2.0f, 0.0f, 0.0f));
+        boundings[3].setMax(boundings[3].getMin() + dimension / 2.0f);
+
+        boundings[4].setMin(min + glm::vec3(0.0f, 0.0f, dimension.z / 2.0f));
+        boundings[4].setMax(boundings[4].getMin() + dimension / 2.0f);
+
+        boundings[5].setMin(min + glm::vec3(0.0f, dimension.y / 2.0f, dimension.z / 2.0f));
+        boundings[5].setMax(boundings[5].getMin() + dimension / 2.0f);
+
+        boundings[6].setMin(min + dimension / 2.0f);
+        boundings[6].setMax(boundings[6].getMin() + dimension / 2.0f);
+
+        boundings[7].setMin(min + glm::vec3(dimension.x / 2.0f, 0.0f, dimension.z / 2.0f));
+        boundings[7].setMax(boundings[7].getMin() + dimension / 2.0f);
+
+        //
     }
 
 private:
