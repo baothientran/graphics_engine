@@ -57,10 +57,10 @@ private:
             }
         }
 
-        static const std::size_t MAX;
-        std::string positions[10];
-        std::string colors[10];
-        std::string radius[10];
+        static constexpr const std::size_t MAX = 10;
+        std::string positions[MAX];
+        std::string colors[MAX];
+        std::string radius[MAX];
     };
 
     static const std::string MVP_MAT;

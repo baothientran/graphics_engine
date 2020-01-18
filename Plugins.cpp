@@ -365,7 +365,7 @@ void ImportMeshFilePlugin::processShape(const tinyobj::shape_t &shape_t,
 
         drawable->setName(shape_t.name + "_mat" + std::to_string(idx));
 
-        rootNode.emplaceChild(std::move(drawable));
+        rootNode.createChild(std::move(drawable));
         idx = right;
     }
 }

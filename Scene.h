@@ -82,13 +82,7 @@ public:
 
     inline ConstIterator childEnd() const { return _children.end(); }
 
-    inline Node &addChild(Node node) {
-        auto &newlyAdded = _children.emplace_back(std::move(node));
-        newlyAdded.setParent(this);
-        return newlyAdded;
-    }
-
-    inline Node &emplaceChild(T drawable) {
+    inline Node &createChild(T drawable) {
         auto &newlyAdded = _children.emplace_back(std::move(drawable));
         newlyAdded.setParent(this);
         return newlyAdded;

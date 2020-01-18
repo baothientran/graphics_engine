@@ -32,6 +32,8 @@ add_executable(GraphicsEngine
     GLDriver.cpp
     Scene.h
     Scene.cpp
+    AccelerateStructures.h
+    AccelerateStructures.cpp
     DrawContext.h
     DrawContext.cpp
     Drawables.h

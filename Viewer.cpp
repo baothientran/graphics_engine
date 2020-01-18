@@ -41,7 +41,7 @@ void Viewer::initialize() {
     // initialize scene
     auto &root = _context.getRoot();
     auto pointLight = _context.createDrawable<PointLight>(glm::vec3(2.0f), 1000.0f);
-    auto &lightNode = root.emplaceChild(std::move(pointLight));
+    auto &lightNode = root.createChild(std::move(pointLight));
     lightNode.position() = glm::vec3{250.0f, 250.0f, 250.0f};
 }
 

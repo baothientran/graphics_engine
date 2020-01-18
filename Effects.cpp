@@ -77,8 +77,6 @@ void ColorEffect::draw(const std::vector<Drawable *> &drawables,
 /***************************************************
  * ForwardPhongEffect definitions
  ***************************************************/
-const std::size_t ForwardPhongEffect::PointLightUniforms::MAX = 10;
-
 const std::string ForwardPhongEffect::EFFECT_NAME = "ForwardPhongEffect";
 
 const std::string ForwardPhongEffect::AMBIENT_COLOR = "ambientColor";

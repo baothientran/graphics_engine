@@ -57,9 +57,9 @@ public slots:
 private:
     void setCameraProjMatrix(DrawContext &context);
 
-    const float CAM_FOV = 45.0f;
-    const float CAM_NEAR = 0.1f;
-    const float CAM_FAR = 10000.0f;
+    static constexpr const float CAM_FOV = 45.0f;
+    static constexpr const float CAM_NEAR = 0.1f;
+    static constexpr const float CAM_FAR = 10000.0f;
 };
 
 
